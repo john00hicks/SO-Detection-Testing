@@ -6,6 +6,7 @@ Open your Hunt tab. Use these specific KQL queries to find the tracks left by th
 
 # To see exactly what data you have available in your Security Onion environment
 event.dataset: *
+
 OQL Query> * | groupby event.module event.dataset
 event.module: This identifies the source engine. You’ll likely see zeek (network metadata), suricata (alerts), endpoint (Elastic Agent), or osquery.
 event.dataset: This tells you the flavor of that data. For Zeek, you’ll see conn, dns, http, ssl. For endpoints, you might see process, filesystem, or network.
