@@ -1,0 +1,77 @@
+Windows Commands 
+
+Win + R → ncpa.cpl (Network Connections Panel. Control Panel Library)
+Win + R → sysdm.cpl (System Properties Device Manager. Control Panel Library)
+
+Search for a file by name (fastest)
+cmd> dir C:\ /s /b | findstr /i "<filename>"
+cmd> dir C:\ /s /b | C:\Windows\System32\findstr.exe /i "x64dbg*"		# if PATH variable is messed up
+• /s → search subdirectories
+• /b → bare output (full paths only)
+• findstr /i → case‑insensitive match
+			cmd> where /R C:\ *obsidian*
+			C:\Users\bbt12\Downloads\Obsidian-1.11.7.exe
+						/R = Recursive
+PS> Get-ChildItem -Path C:\ -Recurse -Filter "*filename*" -ErrorAction SilentlyContinue | Select-Object FullName
+
+Search for a file by extension
+cmd> dir C:\*.txt /s /b
+
+Search Strings → output file contain the string
+cmd> findstr /s /i /m "<text_to_search>" C:\*.*
+cmd> findstr /s /i /m "sqlftp" C:\*.*
+• /m → only show filenames
+• /s → recursive
+• /i → case‑insensitive
+
+Search File Using where (built‑in search)
+cmd> where /r C:\ <filename>
+cmd> where /r C:\ sqlftp.txt
+
+Decode Base64 strings
+PS> [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String("SGVsbG8gd29ybGQ="))
+
+Add an Exclusion = To keep Windows Defender from eating your tools or blocking your builds
+PS > Add-MpPreference -ExclusionPath "C:\Users\student\Desktop\BVT-Tools"
+To verify it worked, you can list your exclusions with:
+PS > Get-MpPreference | Select-Object -ExpandProperty ExclusionPath
+
+Grep string “SID” in first 20 line of yourfile.txt
+PS> Get-Content .\yourfile.txt -TotalCount 20 | Select-String "SID"
+
+# Elevate to SYSTEM with PsExec
+PS> .\PsExec.exe -s -i powershell.exe
+
+# File compare differences
+cmd C:\Users\htb-student\Desktop>fc file1.txt file2.txt
+Comparing files file1.txt and FILE2.TXT
+***** file1.txt
+
+The Difference between file1.txt and file2.txt show here !!!
+***** FILE2.TXT
+*****
+# Runas Administrator
+cmd/PS>runas /noprofile /user:CHILD-DC\Administrator powershell.exe
+cmd/PS> runas /user:Administrator cmd
+cmd > powershell Start-Process cmd -Verb runas
+
+# Test Connection
+PS> tnc 192.168.31.130 -Port 8081
+# Change password
+PS> net user Administrator YourStrongPassword123!
+# Account disable/enable Check
+PS> Get-LocalUser -Name "Administrator" | Select-Object Name, Enabled
+PS> Enable-LocalUser -Name "Administrator"
+# Domain joined Check → to see what domain is this host joined
+PS> (Get-WmiObject Win32_ComputerSystem).Domain
+# Unjoin the Domain (You need the creds of Account from DC to authorised the unjoin & You need the DC to be ONLINE)
+PS> Remove-Computer -UnjoinDomainCredential "DomainName\Administrator" -Restart
+# Compress/Un-Zip
+PS> 7z a <output-file> <input-file>	= Compress
+PS> 7z a BVT-Binaries.7z BVT-Binaries
+PS> 7z x BVT-Binaries.7z		= Extract/Unzip
+
+# Find IP
+cmd>.\strings.exe C:\test.txt | findstr /R "[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*"
+# Find Domain Name
+cmd>.\strings.exe C:\test.txt | findstr /R "[A-Za-z0-9-][A-Za-z0-9-]*\.[A-Za-z][A-Za-z]*"
