@@ -1,0 +1,166 @@
+===============================================================================
+1. Find Domain-like strings.
+ ([a-zA-Z0-9-]+\.)+ — matches one or more labels (like www. or mail.), allowing letters, digits, and hyphens
+ [a-zA-Z]{2,63} — matches the top-level domain (TLD), like com, net, co.uk, etc.
+ -Eo — enables extended regex and prints only the matched part
+$ grep -Eo '([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,63}' file.txt
+https://example.com
+ 
+2. Find IP address in test.txt. 
+-E: Enables extended regular expressions. -o: Outputs only the matched portion, rather than the full line.
+ ([0-9]{1,3}\.){3} ==> ([0-9]{1,3}\.): Matches 1 to 3 digits ([0-9]{1,3}), followed by a dot (.).
+ {3}: Repeats this pattern three times, ensuring we get three number-dot pairs.
+ [0-9]{1,3} ==> Matches the final group of 1 to 3 digits, completing the IPv4 address structure.
+ $ grep -Eo '([0-9]{1,3}\.){3}[0-9]{1,3}'
+192.168.110.54
+
+3. Convert time to unix timestamp
+		date -d '2021-08-17 12:27:00.073183' +%s.%N
+		
+4.  Look for files created or changed within ±30 minutes of 2008-07-20 01:28:03  timestamp.
+Create two time reference files:
+$ touch before -t 200807200058              # 12:58 AM
+$ touch after -t 200807200158                 # 01:58 PM
+Then run:
+$ find ./ -newer before ! -newer after -type f -exec stat --format '%n %s %A %U %G %y %x %z %w' {} \; > /Path-To/Files-Modified-1hWindow
+You’ll get just the files modified in that 1-hour window
+		Flag        Meaning
+%n        File name
+%s        File size in bytes
+%A        File permissions
+%U        File owner name
+%G        File group name
+%y        Modification time
+%x        Access time
+%z        Change time
+%w        Birth time (if supported)
+5. Find DLL full relative Path
+grep \...\....\....[\*anything from the last backslash to .dll]
+grep -oP '\\[^\\]*\.dll'
+
+6. Detect Obfuscates Sttrings (N'e.w".o'B'j.e'C'T)
+$ grep -Ei "([A-Za-z](['\"\.-]+)?){3,}"
+([A-Za-z](['\".\.-]+)?){3,}
+• [A-Za-z] → matches a letter.
+• (['\"\.-]+)? → optionally followed by ', ", ., or -.
+• ? = “zero or one occurrence” of the preceding element. Example: colou?r --> Matches: color or colour (? apply to u)
+• + = Match one or more of the preceding element. Example: [0-9]+ → matches any integer (one or more digits).
+• {3,} → repeat at least 3 times (so it catches obfuscated words like N'e.w".o'B'j.e'C'T).
+
+7. Misc
+cut -f 1,3,5		# Print collumn 1,3,5 
+awk ‘{print $2}’		# Print Collumn 2		
+grep -E -i 'Key|Directory|File'	
+find with words "Key", "Directory", "File".						
+ -E: Enables extended regular expressions, allowing the use of the | (OR) operator.
+ -i: Makes the search case-insensitive, so it will match "Key", "key", "Directory", "directory", etc.
+ -w: Match the whole word only
+ -r: Recursive, Read all files under each directory.
+$ find / -type f -iname "GetNPUsers.py" 2>/dev/null
+🧠 Breakdown
+find /: Start searching from the root directory
+-type f: Look only for files (not directories)
+-iname "GetNPUsers.py": Match the filename (case insensitive)
+2>/dev/null: Suppress permission errors for cleaner output
+$ sudo lsof -i :8080			
+lsof = list open file | list the processes that have a network socket open on port 8080. 
+-i option is used to filter network-related files (sockets).
+# Find the process using port 8080
+$ sudo lsof -i :8080
+> netstat -aon | findstr :8080
+> tasklist /FI "PID eq 7156"
+OR> Get-Process | findstr 7156
+# FInd LSASS PID
+ >tasklist /FI "IMAGENAME eq lsass.exe"
+
+$ sudo netstat -tulnp | grep 8080
+$ sudo kill -9 <PID>		# Kill the Process
+$ less filename.txt
+Navigation keys:
+• Space: next page
+• b: back a page
+• /<searchterm>: search forward (press “n” for next match result, “N” for back to previous match)
+• ?<searchterm>: search backward
+• q: quit
+$ diff test1.txt test2.txt
+🧠 What it shows:
+• Lines prefixed with < are from test1.txt
+• Lines prefixed with > are from test2.txt
+• It highlights additions, deletions, and changes between the two files
+$ vmware-hgfsclient		# Outputs the names of shared folders configured in the VM settings.
+$ ps aux --sort=-%mem | head -20    # shows the top 20 processes, sorted by memory usage (highest first)
+$ uname -a		# Display System Information
+$ jobs 		# background-suspended jobs that you hit  Ctrl+Z earlier (instead of finishing/killing them).  those jobs are still hanging around.
+$ kill %1   # replace 1 with the job number from jobs. and Kill that jobs
+$ nc -vz 10.10.14.23 31337
+nc → netcat, a tool to make raw network connections.
+-v → verbose, tells you what’s happening.
+-z → zero-I/O mode, don’t actually send data, just check if the port is open (like a port scanner).
+10.10.14.23 → the target host (your Sliver server box).
+31337 → the target port (the Sliver server mTLS listener).
+$ ss -tulpn | grep 31337
+ss → “socket statistics.” A modern replacement for netstat, shows all sockets and listening ports.
+-t → show TCP sockets.
+-u → show UDP sockets.
+-l → show only listening sockets.
+-p → show the process that owns the socket.
+-n → show numeric addresses/ports (don’t resolve service names like http).
+| grep 31337 → filter the results to only show entries with port 31337.
+$ du -sh /path/to/folder
+• du = disk usage
+• -s = summarize (shows only the total size)
+• -h = human-readable (displays size in KB, MB, GB)
+$ which capa
+• It searches your system’s $PATH environment variable.
+• If it finds a file named capa in one of those directories, it prints the path.
+• If it doesn’t find anything, it returns nothing—meaning capa isn’t installed or isn’t in your path.
+$ echo "10.129.228.236 LAB.LOCAL" | sudo tee -a /etc/hosts
+		tee = reads the input it receives from the pipe |
+		-a = append
+		Resolve name “LAB.LOCAL” → IPaddr  “10.129.228.236” 
+# /etc/hosts = static name-to-IP mapping used for local overrides; checked before DNS
+# /etc/resolv.conf = configures DNS servers for dynamic name resolution when /etc/hosts doesn't match
+TL;DR: hosts is local and manual, resolv.conf is networked and dynamic.
+$ sudo chattr -i /etc/resolv.conf
+Removes the immutable flag so the file can be modified or deleted.
+$ echo "nameserver 10.129.228.236" | sudo tee -a /etc/resolv.conf
+Adds 10.129.228.236 as the first DNS resolver in /etc/resolv.conf so your system queries that server for name lookups.
+$ sudo chattr +i /etc/resolv.conf
++i sets the immutable flag, preventing any changes, deletions, or overwrites — even by root.
+┌──(certify)─(kali㉿kali)-[~/Documents/Certify]
+└─$ nslookup LAB.LOCAL
+Server:		10.129.228.236
+Address:	10.129.228.236#53
+Name:	LAB.LOCAL
+Address: 192.168.1.75				
+$ dig @10.129.228.236 LAB.LOCAL		= DNS lookup query, you ask 10.129.228.236(DNS Server) who is LAB.LOCAL?
+@10.129.228.236 — specifies the DNS server you’re querying directly (in this case, at IP 10.129.228.236).
+LAB.LOCAL — is the domain name you want to resolve.
+
+$ Journalctl -u <Service name> | tail -n 20		-> inspecting the last 20 log entries of a specific systemd service
+• journalctl → Queries and displays logs collected by systemd-journald.
+• -u <Service name> → Filters logs to only show entries from the specified unit (e.g., nginx.service, sshd.service).
+• | tail -n 20 → Pipes the output to tail, which shows only the last 20 lines.
+
+To list all systemd services (units) on your system, you can use:
+🔧 Commands
+• Show all loaded units (active + inactive):
+$ systemctl list-units --type=service --all
+
+• Show only active services:
+$ systemctl list-units --type=service
+
+• Show all installed service files (whether running or not):
+systemctl list-unit-files --type=service
+
+• Add 3 IP in scan.txt
+$ echo '172.16.19.3\n172.16.19.5\n172.16.19.77' | tee scan.txt
+
+• View File (Json, HTML, grep)
+JSON   → structured, use jq | $ cat domain_users.json | jq .  or $ less domain_users.json
+HTML   → pretty, open in browser | $ xdg-open domain_users.html | $ w3m domain_users.html | $ lynx domain_users.html
+grep   → raw text, use cat/grep | $ cat domain_users.grep | $ grep "Admin" domain_users.grep
+
+•  Kill a process
+ $ sudo kill -9 1246		# kill kill process by PID | -9 = Force Kill
+ $ sudo pkill -if responder		# pkill kill process by name | f = force | i = ignore case
