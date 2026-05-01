@@ -75,3 +75,22 @@ PS> 7z x BVT-Binaries.7z		= Extract/Unzip
 cmd>.\strings.exe C:\test.txt | findstr /R "[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*"
 # Find Domain Name
 cmd>.\strings.exe C:\test.txt | findstr /R "[A-Za-z0-9-][A-Za-z0-9-]*\.[A-Za-z][A-Za-z]*"
+
+# See Most recent modified Files - list of all files, sorted by date with the most recent at the top
+cmd> dir /S /O-D /TW
+	• /O-D: Sorts by Order, then by Date, with the minus (-) sign making it descending (newest first).
+	• /TW: Forces the command to use the Time of Writing (modification date) specifically.
+Pro Tip: If you are trying to find files modified by a specific process or "touched" right this second, 
+you can also use the below to pause the list so you don't miss the newest files as they scroll by.
+hit spacebar for more OR ctrl+C to exit.
+cmd> dir /S /T:W /O:-D | more 
+	• /S: Searches subfolders (recursive).
+	• /T:W: Timefield: Write
+	• /O: -D: Order: Reverse Date.
+	• more: Stop the screen once it's full.
+cmd> forfiles /S /D +04/28/2026 /C "cmd /c echo @fdate @ftime @path" | more
+	• /D +04/28/2026: Filters for files modified on or after the specified date.
+	• /C: Indicates the start of the command string to be executed for each file found.
+	• @fdate: A variable that represents the date the file was last modified.
+	• @ftime: A variable that represents the time the file was last modified.
+	• @path: A variable that represents the full path of the file.
